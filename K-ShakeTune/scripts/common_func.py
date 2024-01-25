@@ -84,7 +84,10 @@ def compute_mechanical_parameters(psd, freqs):
     freq_above_half_power = freqs[idx_above - 1] + (half_power - psd[idx_above - 1]) * (freqs[idx_above] - freqs[idx_above - 1]) / (psd[idx_above] - psd[idx_above - 1])
 
     bandwidth = freq_above_half_power - freq_below_half_power
-    zeta = bandwidth / (2 * fr)
+    bw1 = math.pow(bandwidth/fr,2)
+    bw2 = math.pow(bandwidth/fr,4)
+
+    zeta = math.sqrt(0.5-math.sqrt(1/(4+4*bw1-bw2)))
 
     return fr, zeta, max_power_index
 
@@ -96,11 +99,11 @@ def detect_peaks(data, indices, detection_threshold, relative_height_threshold=N
     smoothed_data = np.convolve(data, kernel, mode='valid')
     mean_pad = [np.mean(data[:window_size])] * (window_size // 2)
     smoothed_data = np.concatenate((mean_pad, smoothed_data))
-    
+
     # Find peaks on the smoothed curve
     smoothed_peaks = np.where((smoothed_data[:-2] < smoothed_data[1:-1]) & (smoothed_data[1:-1] > smoothed_data[2:]))[0] + 1
     smoothed_peaks = smoothed_peaks[smoothed_data[smoothed_peaks] > detection_threshold]
-    
+
     # Additional validation for peaks based on relative height
     valid_peaks = smoothed_peaks
     if relative_height_threshold is not None:
@@ -115,7 +118,7 @@ def detect_peaks(data, indices, detection_threshold, relative_height_threshold=N
     for peak in valid_peaks:
         local_max = peak + np.argmax(data[max(0, peak-vicinity):min(len(data), peak+vicinity+1)]) - vicinity
         refined_peaks.append(local_max)
-    
+
     num_peaks = len(refined_peaks)
-    
+
     return num_peaks, np.array(refined_peaks), indices[refined_peaks]
